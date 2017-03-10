@@ -1987,7 +1987,12 @@ module.request = function(context, verb, options, entity, callback) {
           res.statusCode >= 300 ||
           (_.isObject(body) && body.Fault && body.Fault.Error && body.Fault.Error.length) ||
           (_.isString(body) && !_.isEmpty(body) && body.indexOf('<') === 0)) {
-        callback(err || body, body)
+        var reportedError = err || body;
+        if (!(reportedError instanceof Error) && body.Fault && body.Fault.Error && body.Fault.Error.length) {
+          reportedError = new Error(body.Fault.Error.map(e=>`${e.code} ${e.element?`on ${e.element}: `:''}${e.Message} (${e.Detail})`).join())
+          reportedError.name = body.Fault.type;
+        }
+        callback(reportedError, body)
       } else {
         callback(null, body)
       }
